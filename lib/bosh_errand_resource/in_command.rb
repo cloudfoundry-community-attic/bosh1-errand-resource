@@ -1,7 +1,7 @@
 require "json"
 require "time"
 
-module BoshDeploymentResource
+module BoshErrandResource
   class InCommand
     def initialize(writer=STDOUT)
       @writer = writer

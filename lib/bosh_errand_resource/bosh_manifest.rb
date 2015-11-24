@@ -1,7 +1,7 @@
 require "tempfile"
 require "yaml"
 
-module BoshDeploymentResource
+module BoshErrandResource
   class BoshManifest
     def initialize(path)
       @manifest = YAML.load_file(path)

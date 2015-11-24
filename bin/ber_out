@@ -2,7 +2,7 @@
 
 require "json"
 
-require 'bosh_deployment_resource'
+require 'bosh_errand_resource'
 
 working_dir = ARGV[0]
 request = JSON.parse(STDIN.read)
@@ -19,16 +19,16 @@ target =
     source.fetch("target")
   end
 
-bosh = BoshDeploymentResource::Bosh.new(
+bosh = BoshErrandResource::Bosh.new(
   target,
   source.fetch("username"),
   source.fetch("password"),
 )
-manifest = BoshDeploymentResource::BoshManifest.new(
+manifest = BoshErrandResource::BoshManifest.new(
   File.expand_path(params.fetch("manifest"), working_dir)
 )
 
-command = BoshDeploymentResource::OutCommand.new(bosh, manifest)
+command = BoshErrandResource::OutCommand.new(bosh, manifest)
 
 begin
   command.run(working_dir, request)

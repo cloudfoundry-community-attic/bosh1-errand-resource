@@ -4,7 +4,7 @@ require "zlib"
 
 require "archive/tar/minitar"
 
-module BoshDeploymentResource
+module BoshErrandResource
   class BoshRelease
     def initialize(path)
       @path = path

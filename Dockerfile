@@ -10,6 +10,7 @@ ADD . /tmp/resource-gem
 RUN cd /tmp/resource-gem && \
     gem build *.gemspec && gem install *.gem --no-document && \
     mkdir -p /opt/resource && \
-    ln -s $(which bdr_check) /opt/resource/check && \
-    ln -s $(which bdr_in) /opt/resource/in && \
-    ln -s $(which bdr_out) /opt/resource/out
+    ln -s $(which ber_check) /opt/resource/check && \
+    ln -s $(which ber_in) /opt/resource/in && \
+    ln -s $(which ber_out) /opt/resource/out
+

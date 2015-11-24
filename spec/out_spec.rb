@@ -8,10 +8,10 @@ require "tmpdir"
 require "stringio"
 
 describe "Out Command" do
-  let(:manifest) { instance_double(BoshDeploymentResource::BoshManifest, fallback_director_uuid: nil, use_stemcell: nil, use_release: nil, name: "bosh-deployment") }
-  let(:bosh) { instance_double(BoshDeploymentResource::Bosh, upload_stemcell: nil, upload_release: nil, deploy: nil, director_uuid: "some-director-uuid") }
+  let(:manifest) { instance_double(BoshErrandResource::BoshManifest, fallback_director_uuid: nil, name: "bosh-deployment") }
+  let(:bosh) { instance_double(BoshErrandResource::Bosh, errand: nil, director_uuid: "some-director-uuid") }
   let(:response) { StringIO.new }
-  let(:command) { BoshDeploymentResource::OutCommand.new(bosh, manifest, response) }
+  let(:command) { BoshErrandResource::OutCommand.new(bosh, manifest, response) }
 
   let(:written_manifest) do
     file = Tempfile.new("bosh_manifest")
@@ -38,16 +38,6 @@ describe "Out Command" do
     end
   end
 
-  def add_default_artefacts(working_dir)
-    cp "spec/fixtures/stemcell.tgz", working_dir, "stemcells", "stemcell.tgz"
-    cp "spec/fixtures/stemcell.tgz", working_dir, "stemcells", "other-stemcell.tgz"
-    touch working_dir, "stemcells", "not-stemcell.txt"
-
-    cp "spec/fixtures/release.tgz", working_dir, "releases", "release.tgz"
-    cp "spec/fixtures/release.tgz", working_dir, "releases", "other-release.tgz"
-    touch working_dir, "releases", "not-release.txt"
-  end
-
   before do
     allow(manifest).to receive(:write!).and_return(written_manifest)
   end
@@ -62,33 +52,15 @@ describe "Out Command" do
       },
       "params" => {
         "manifest" => "manifest/deployment.yml",
-        "stemcells" => [
-          "stemcells/*.tgz"
-        ],
-        "releases" => [
-          "releases/*.tgz"
-        ]
+        "errand" => "smoke-tests",
       }
     }
   }
 
   context "with valid inputs" do
-    it "uploads matching stemcells to the director" do
-      in_dir do |working_dir|
-        add_default_artefacts working_dir
-
-        expect(bosh).to receive(:upload_stemcell).
-          with(File.join(working_dir, "stemcells", "stemcell.tgz"))
-        expect(bosh).to receive(:upload_stemcell).
-          with(File.join(working_dir, "stemcells", "other-stemcell.tgz"))
-
-        command.run(working_dir, request)
-      end
-    end
 
     it "emits a sha1 checksum of the manifest as the version" do
       in_dir do |working_dir|
-        add_default_artefacts working_dir
 
         command.run(working_dir, request)
 
@@ -98,74 +70,15 @@ describe "Out Command" do
       end
     end
 
-    it "emits the release/stemcell versions in the metadata" do
-      in_dir do |working_dir|
-        add_default_artefacts working_dir
 
-        command.run(working_dir, request)
-
-        expect(JSON.parse(response.string)["metadata"]).to eq([
-          {"name" => "stemcell", "value" => "bosh-aws-xen-hvm-ubuntu-trusty-go_agent v2905"},
-          {"name" => "stemcell", "value" => "bosh-aws-xen-hvm-ubuntu-trusty-go_agent v2905"},
-          {"name" => "release", "value" => "concourse v0.43.0"},
-          {"name" => "release", "value" => "concourse v0.43.0"}
-        ])
-      end
-    end
-
-    it "handles overlapping stemcell globs by removing duplication" do
-      request.fetch("params").store("stemcells", [
-        "stemcells/*.tgz",
-        "stemcells/*.tgz"
-      ])
-
-      in_dir do |working_dir|
-        add_default_artefacts working_dir
-
-        expect(bosh).to receive(:upload_stemcell).exactly(2).times
-
-        command.run(working_dir, request)
-      end
-    end
-
-    it "uploads matching releases to the director" do
-      in_dir do |working_dir|
-        add_default_artefacts working_dir
-
-        expect(bosh).to receive(:upload_release).
-          with(File.join(working_dir, "releases", "release.tgz"))
-        expect(bosh).to receive(:upload_release).
-          with(File.join(working_dir, "releases", "other-release.tgz"))
-
-        command.run(working_dir, request)
-      end
-    end
-
-    it "handles overlapping release globs by removing duplication" do
-      request.fetch("params").store("releases", [
-        "releases/*.tgz",
-        "releases/*.tgz"
-      ])
-
-      in_dir do |working_dir|
-        add_default_artefacts working_dir
-
-        expect(bosh).to receive(:upload_release).exactly(2).times
-
-        command.run(working_dir, request)
-      end
-    end
 
     it "generates a new manifest (with locked down versions and a defaulted director uuid) and deploys it" do
       in_dir do |working_dir|
-        add_default_artefacts working_dir
 
         expect(bosh).to receive(:director_uuid).and_return("abcdef")
-        expect(manifest).to receive(:use_release)
-        expect(manifest).to receive(:use_stemcell)
         expect(manifest).to receive(:fallback_director_uuid).with("abcdef")
 
-        expect(bosh).to receive(:deploy).with(written_manifest.path)
+        expect(bosh).to receive(:errand).with(written_manifest.path, "smoke-tests")
 
         command.run(working_dir, request)
       end
@@ -187,8 +100,7 @@ describe "Out Command" do
             },
             "params" => {
               "manifest" => "deployment.yml",
-              "stemcells" => [],
-              "releases" => []
+              "errand" => "smoke-tests",
             }
           })
         end.to raise_error /given deployment name 'bosh-deployment' does not match manifest name 'other-name'/
@@ -206,8 +118,7 @@ describe "Out Command" do
             },
             "params" => {
               "manifest" => "deployment.yml",
-              "stemcells" => [],
-              "releases" => []
+              "errand" => "smoke-tests",
             }
           })
         end.to raise_error /source must include 'username'/
@@ -225,8 +136,7 @@ describe "Out Command" do
             },
             "params" => {
               "manifest" => "deployment.yml",
-              "stemcells" => [],
-              "releases" => []
+              "errand" => "smoke-tests",
             }
           })
         end.to raise_error /source must include 'password'/
@@ -244,8 +154,7 @@ describe "Out Command" do
             },
             "params" => {
               "manifest" => "deployment.yml",
-              "stemcells" => [],
-              "releases" => []
+              "errand" => "smoke-tests",
             }
           })
         end.to raise_error /source must include 'deployment'/
@@ -263,65 +172,30 @@ describe "Out Command" do
               "deployment" => "bosh-deployment",
             },
             "params" => {
-              "stemcells" => [],
-              "releases" => []
+              "errand" => "smoke-tests",
             }
           })
         end.to raise_error /params must include 'manifest'/
       end
     end
 
-    describe "stemcell and release globs" do
-      it "errors if the stemcells are not an array" do
-        in_dir do |working_dir|
-          expect do
-            command.run(working_dir, {
-              "source" => {
-                "target" => "http://bosh.example.com",
-                "username" => "bosh-username",
-                "password" => "bosh-password",
-                "deployment" => "bosh-deployment",
-              },
-              "params" => {
-                "manifest" => "deployment.yml",
-                "stemcells" => "stemcell.tgz",
-                "releases" => []
-              }
-            })
-          end.to raise_error /stemcells must be an array of globs/
-        end
-      end
-
-      it "errors if the stemcells are not an array" do
-        in_dir do |working_dir|
-          expect do
-            command.run(working_dir, {
-              "source" => {
-                "target" => "http://bosh.example.com",
-                "username" => "bosh-username",
-                "password" => "bosh-password",
-                "deployment" => "bosh-deployment",
-              },
-              "params" => {
-                "manifest" => "deployment.yml",
-                "stemcells" => [],
-                "releases" => "release.tgz"
-              }
-            })
-          end.to raise_error /releases must be an array of globs/
-        end
-      end
-
-      it "errors if a glob resolves to an empty list of files" do
-        in_dir do |working_dir|
-          touch working_dir, "stemcells", "stemcell.tgz"
-          touch working_dir, "releases", "release.rtf"
-
-          expect do
-            command.run(working_dir, request)
-          end.to raise_error "glob 'releases/*.tgz' matched no files"
-        end
+    it "requires a errand" do
+      in_dir do |working_dir|
+        expect do
+          command.run(working_dir, {
+            "source" => {
+              "target" => "http://bosh.example.com",
+              "username" => "bosh-username",
+              "password" => "bosh-password",
+              "deployment" => "bosh-deployment",
+            },
+            "params" => {
+              "manifest" => "deployment.yml",
+            }
+          })
+        end.to raise_error /params must include 'errand'/
       end
     end
+
   end
 end

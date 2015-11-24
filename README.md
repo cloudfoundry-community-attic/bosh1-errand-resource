@@ -1,7 +1,8 @@
-# BOSH Deployment Resource
+# BOSH Errand Resource
 
-An output only resource (at the moment) that will upload stemcells and releases
-and then deploy them.
+An output only resource (at the moment) that will run errands.
+
+Forked from Bosh Deployment Resources, Thanks Chris Brown and Alex Suraci
 
 ## Source Configuration
 
@@ -16,7 +17,7 @@ and then deploy them.
 
 ``` yaml
 - name: staging
-  type: bosh-deployment
+  type: bosh-errand
   source:
     target: https://bosh.example.com:25555
     username: admin
@@ -28,12 +29,7 @@ and then deploy them.
 - put: staging
   params:
     manifest: path/to/manifest.yml
-    stemcells:
-    - path/to/stemcells-*.tgz
-    - other/path/to/stemcells-*.tgz
-    releases:
-    - path/to/releases-*.tgz
-    - other/path/to/releases-*.tgz
+    errand: smoke-tests
 ```
 
 ## Behaviour
@@ -50,11 +46,7 @@ the UUID returned by the targeted director.
 
 * `manifest`: *Required.* Path to a BOSH deployment manifest file.
 
-* `stemcells`: *Required.* An array of globs that should point to where the
-  stemcells used in the deployment can be found.
-
-* `releases`: *Required.* An array of globs that should point to where the
-  releases used in the deployment can be found.
+* `errand`: *Required.* Name of errand to be ran.
 
 * `target_file`: *Optional.* Path to a file containing a BOSH director address.
   This allows the target to be determined at runtime, e.g. by acquiring a BOSH

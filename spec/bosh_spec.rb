@@ -1,7 +1,7 @@
 require "spec_helper"
 
-describe BoshDeploymentResource::CommandRunner do
-  let (:command_runner) { BoshDeploymentResource::CommandRunner.new }
+describe BoshErrandResource::CommandRunner do
+  let (:command_runner) { BoshErrandResource::CommandRunner.new }
 
   describe '.run' do
     it 'takes a command and an environment and spanws a process' do
@@ -33,35 +33,19 @@ describe BoshDeploymentResource::CommandRunner do
   end
 end
 
-describe BoshDeploymentResource::Bosh do
+describe BoshErrandResource::Bosh do
   let(:target) { "http://bosh.example.com" }
   let(:username) { "bosh-userΩΩΩΩ" }
   let(:password) { "bosh-password!#%&#(*" }
-  let(:command_runner) { instance_double(BoshDeploymentResource::CommandRunner) }
+  let(:command_runner) { instance_double(BoshErrandResource::CommandRunner) }
 
-  let(:bosh) { BoshDeploymentResource::Bosh.new(target, username, password, command_runner) }
+  let(:bosh) { BoshErrandResource::Bosh.new(target, username, password, command_runner) }
 
-  describe ".upload_stemcell" do
-    it "runs the command to upload a stemcell" do
-      expect(command_runner).to receive(:run).with(%{bosh -n --color -t #{target} upload stemcell /path/to/a/stemcell.tgz --skip-if-exists}, { "BOSH_USER" => username, "BOSH_PASSWORD" => password }, {})
+  describe ".errand" do
+    it "runs the command to run errand" do
+      expect(command_runner).to receive(:run).with(%{bosh -n --color -t #{target} -d /path/to/a/manifest.yml run errand smoke-tests}, { "BOSH_USER" => username, "BOSH_PASSWORD" => password }, {})
 
-      bosh.upload_stemcell("/path/to/a/stemcell.tgz")
-    end
-  end
-
-  describe ".upload_release" do
-    it "runs the command to upload a release" do
-      expect(command_runner).to receive(:run).with(%{bosh -n --color -t #{target} upload release /path/to/a/release.tgz --skip-if-exists}, { "BOSH_USER" => username, "BOSH_PASSWORD" => password }, {})
-
-      bosh.upload_release("/path/to/a/release.tgz")
-    end
-  end
-
-  describe ".deploy" do
-    it "runs the command to deploy" do
-      expect(command_runner).to receive(:run).with(%{bosh -n --color -t #{target} -d /path/to/a/manifest.yml deploy}, { "BOSH_USER" => username, "BOSH_PASSWORD" => password }, {})
-
-      bosh.deploy("/path/to/a/manifest.yml")
+      bosh.errand("/path/to/a/manifest.yml", "smoke-tests")
     end
   end
 

@@ -7,7 +7,7 @@ require "time"
 describe "In Command" do
   let(:working_dir) { "/haha/this/is/not/used" }
   let(:response) { StringIO.new }
-  let(:command) { BoshDeploymentResource::InCommand.new(response) }
+  let(:command) { BoshErrandResource::InCommand.new(response) }
 
   def run_command
     command.run(working_dir, request)
