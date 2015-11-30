@@ -25,7 +25,7 @@ module BoshErrandResource
         "version" => {
           "manifest_sha1" => manifest_sha1
         },
-        "metadata" => {}
+        "metadata" => []
       }
 
       writer.puts response.to_json
